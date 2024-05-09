@@ -1,5 +1,11 @@
 import pandas as pd
 import json
+from datetime import datetime
+
+def convert_to_serializable(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
 
 def extract_schema_from_excel(excel_file):
     # Read the Excel file
@@ -30,7 +36,7 @@ def extract_schema_from_excel(excel_file):
 
 def save_schema_as_json(schema, json_file):
     with open(json_file, 'w') as f:
-        json.dump(schema, f, indent=4)
+        json.dump(schema, f, indent=4, default=convert_to_serializable)
 
 # Example usage:
 excel_file_path = "your_excel_file.xlsx"
