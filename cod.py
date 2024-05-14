@@ -1,45 +1,36 @@
-import pandas as pd
-import json
-from datetime import datetime
+import psycopg2
+from psycopg2 import OperationalError
 
-def convert_to_serializable(obj):
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
+def create_database(db_name, db_user, db_password, db_host, db_port):
+    try:
+        # Connect to the default 'postgres' database first
+        conn = psycopg2.connect(
+            dbname='postgres',
+            user=db_user,
+            password=db_password,
+            host=db_host,
+            port=db_port
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
 
-def extract_schema_from_excel(excel_file):
-    # Read the Excel file
-    xls = pd.ExcelFile(excel_file)
-    schema = {}
+        # Create the new database
+        cursor.execute(f"CREATE DATABASE {db_name}")
 
-    # Iterate over each sheet
-    for sheet_name in xls.sheet_names:
-        sheet_data = xls.parse(sheet_name)
-        # Extract table name
-        table_name = sheet_name
-        # Extract column names and data types from the first two rows
-        column_names = sheet_data.iloc[0].tolist()
-        data_types = sheet_data.iloc[1].tolist()
+        print(f"Database '{db_name}' created successfully")
 
-        # Create a dictionary to hold the schema of the current sheet
-        sheet_schema = {
-            "table_name": table_name,
-            "columns": {}
-        }
-        for col_name, data_type in zip(column_names, data_types):
-            sheet_schema["columns"][col_name] = data_type
+    except OperationalError as e:
+        print(f"Error: {e}")
+    finally:
+        if conn:
+            conn.close()
 
-        # Add the schema of the current sheet to the overall schema
-        schema[table_name] = sheet_schema
+# Provide your Redshift credentials and configuration
+db_name = "your_database_name"
+db_user = "your_redshift_user"
+db_password = "your_redshift_password"
+db_host = "your_redshift_host"
+db_port = "your_redshift_port"
 
-    return schema
-
-def save_schema_as_json(schema, json_file):
-    with open(json_file, 'w') as f:
-        json.dump(schema, f, indent=4, default=convert_to_serializable)
-
-# Example usage:
-excel_file_path = "your_excel_file.xlsx"
-schema = extract_schema_from_excel(excel_file_path)
-json_file_path = "schema.json"
-save_schema_as_json(schema, json_file_path)
+# Call the function to create the database
+create_database(db_name, db_user, db_password, db_host, db_port)
